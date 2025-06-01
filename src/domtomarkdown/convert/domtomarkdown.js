@@ -1,3 +1,4 @@
+const { MarkdownDocument } = require('./markdowndocument');
 const { TextUtil } = require('./textutil')
 
 class DomToMarkdownError {
@@ -45,6 +46,77 @@ class DomToMarkdownConverter {
         };
     }
 
+    getBlockMarkdown(block) {
+        const self = this;
+        const document = new MarkdownDocument();
+
+        /**
+         * @param {Node|Element} node
+         */
+        function walk(node) {
+            if (self._isTextNode(node)) {
+                document.addInlineMarkdown(self.getInlineMarkdown(node));
+                return;
+            }
+            if (self._isElementNode(node)) {
+                const tag = node.tagName.toLowerCase();
+                if (self._isInlineTag(tag)) {
+                    document.addInlineMarkdown(self.getInlineMarkdown(node));
+                    return;
+                }
+
+                switch (tag) {
+                    case 'div':
+                    case 'article':
+                    case 'p':
+                        document.finishBlock()
+                        for (let i = 0; i < node.childNodes.length; i++) {
+                            walk(node.childNodes[i]);
+                        }
+                        document.finishBlock()
+                        break;
+
+                    case 'h1':
+                        document.addHeader(1, self.getInlineMarkdown(node));
+                        break;
+
+                    case 'h2':
+                        document.addHeader(2, self.getInlineMarkdown(node));
+                        break;
+
+                    case 'h3':
+                        document.addHeader(3, self.getInlineMarkdown(node));
+                        break;
+
+                    case 'h4':
+                        document.addHeader(4, self.getInlineMarkdown(node));
+                        break;
+
+                    case 'h5':
+                        document.addHeader(5, self.getInlineMarkdown(node));
+                        break;
+
+                    case 'h6':
+                        document.addHeader(6, self.getInlineMarkdown(node));
+                        break;
+
+                    default:
+                        self._addError(`Unexpected HTML tag "${tag}": `, node);
+                        document.finishBlock()
+                        for (let i = 0; i < node.childNodes.length; i++) {
+                            walk(node.childNodes[i]);
+                        }
+                        document.finishBlock()
+                        break;
+                }
+            }
+        }
+
+        walk(block);
+
+        return document.finish();
+    }
+
     /**
      * Разбирает содержимое блочного DOM-узла, содержащего параграф текста с inline-тегами форматирования.
      *
@@ -57,8 +129,9 @@ class DomToMarkdownConverter {
 
         /**
          * @param {Node|Element} node
+         * @param {boolean} expectBlock
          */
-        function walk(node) {
+        function walk(node, expectBlock) {
             if (self._isTextNode(node)) {
                 chunks.push(TextUtil.cleanInlineText(node.textContent));
             } else if (self._isElementNode(node)) {
@@ -122,15 +195,6 @@ class DomToMarkdownConverter {
                         }
                         break;
 
-                    case 'sub':
-                        {
-                            const text = self.getInlineText(node);
-                            if (text) {
-                                chunks.push('<sub>' + text + '</sub>');
-                            }
-                        }
-                        break;
-
                     case 'tt':
                     case 'code':
                         {
@@ -167,14 +231,10 @@ class DomToMarkdownConverter {
                         }
                         break;
 
-                    case 'p':
-                        for (let i = 0; i < node.childNodes.length; i++) {
-                            walk(node.childNodes[i]);
-                        }
-                        break;
-
                     default:
-                        self._addError(`Unexpected inline HTML tag "${tag}": `, node);
+                        if (!expectBlock) {
+                            self._addError(`Unexpected inline HTML tag "${tag}": `, node);
+                        }
                         for (let i = 0; i < node.childNodes.length; i++) {
                             walk(node.childNodes[i]);
                         }
@@ -183,7 +243,7 @@ class DomToMarkdownConverter {
             }
         }
 
-        walk(block);
+        walk(block, true);
 
         return this.joinInlineMarkdown(chunks);
     }
@@ -260,6 +320,33 @@ class DomToMarkdownConverter {
      */
     _isElementNode(node) {
         return node.nodeType == 1;
+    }
+
+    /**
+     * @param {string} tag - название HTML тега
+     * @returns {bool} - true, если указанный HTML тег является inline тегом
+     */
+    _isInlineTag(tag) {
+        switch (tag) {
+            case 'strong':
+            case 'b':
+            case 'em':
+            case 'i':
+            case 'u':
+            case 'ins':
+            case 's':
+            case 'del':
+            case 'sup':
+            case 'sub':
+            case 'tt':
+            case 'code':
+            case 'img':
+            case 'a':
+                return true;
+
+            default:
+                return false;
+        }
     }
 
     /**

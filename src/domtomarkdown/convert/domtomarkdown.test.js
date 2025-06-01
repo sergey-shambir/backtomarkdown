@@ -4,7 +4,7 @@ const { JSDOM } = require('jsdom');
 const { DomToMarkdownConverter } = require('./domtomarkdown');
 const { loadTestFilesAsync } = require('../test_data');
 
-describe('markdown module', () => {
+describe('domtomarkdown module', () => {
     test.each([
         'inline/01_img',
         'inline/02_link',
@@ -21,4 +21,19 @@ describe('markdown module', () => {
         const markdown = converter.getInlineMarkdown(fragment.children[0]);
         expect(markdown).toBe(expected);
     })
-});
+
+    test.each([
+        'block/01_paragraphs',
+    ])('can parse block html at "%s"', async (dir) => {
+        const { input, expected } = await loadTestFilesAsync(dir);
+        const fragment = JSDOM.fragment(input);
+        expect(fragment.children.length).toBe(1);
+
+        const converter = new DomToMarkdownConverter({
+            throwOnError: true
+        });
+        const markdown = converter.getBlockMarkdown(fragment.children[0]);
+        expect(markdown).toBe(expected);
+    })
+})
+
