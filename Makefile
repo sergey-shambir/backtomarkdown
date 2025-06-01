@@ -1,4 +1,4 @@
-.PHONY: all clean build test test_e2e download tidy run image
+.PHONY: all clean build test test_e2e download tidy download_js test_js run image
 
 all: tidy test build
 
@@ -28,7 +28,19 @@ download:
 	cd ../..
 
 # Цель не запустится без явного указания
-e2e:
+download_js:
+	cd src/domtomarkdown && \
+	npm ci && \
+	cd ../..
+
+# Цель не запустится без явного указания
+test_js:
+	cd src/domtomarkdown && \
+	npm run test && \
+	cd ../..
+
+# Цель не запустится без явного указания
+test_e2e:
 	cd tests/e2e && \
 	npm run test && \
 	cd ../..

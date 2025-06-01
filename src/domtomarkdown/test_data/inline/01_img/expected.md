@@ -1,0 +1,1 @@
+![Logo](/assets/img/logo.jpg "Logo title") _Site logo_

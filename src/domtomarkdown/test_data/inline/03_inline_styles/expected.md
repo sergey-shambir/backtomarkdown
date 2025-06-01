@@ -1,0 +1,1 @@
+**Bold text**, _italic style_, <ins>underline</ins>, <del>strikethrough</del>, _italic inside em tags_, **strong inside strong tags**, `typewriter inside tt tags`, <ins>text inside ins tag</ins>, <del>text inside del tag</del>, expression with superscript: 2<sup>10</sup>=1024, expression with subscript: N<sub>1</sub>=20, `inline code`
