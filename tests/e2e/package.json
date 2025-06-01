@@ -1,0 +1,19 @@
+{
+  "name": "e2e",
+  "version": "1.0.0",
+  "description": "",
+  "main": "scorm_upload.spec.js",
+  "type": "commonjs",
+  "scripts": {
+    "test": "jest"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "jest": "^29.7.0",
+    "selenium-webdriver": "^4.33.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.14"
+  }
+}
