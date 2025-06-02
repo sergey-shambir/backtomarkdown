@@ -1,4 +1,4 @@
-const { MarkdownDocument } = require('./markdowndocument');
+const { MarkdownDocument } = require('./markdowndocument')
 const { TextUtil } = require('./textutil')
 
 class DomToMarkdownError {
@@ -7,22 +7,22 @@ class DomToMarkdownError {
      * @param {Node} node 
      */
     constructor(message, node) {
-        this.message = message;
-        this.node = node;
+        this.message = message
+        this.node = node
     }
 
     /**
      * @returns {string}
      */
     toString() {
-        return this.message + ': ' + this.node.outerHTML;
+        return this.message + ': ' + this.node.outerHTML
     }
 
     /**
      * @returns {Error}
      */
     toError() {
-        return new Error(this.toString());
+        return new Error(this.toString())
     }
 }
 
@@ -39,30 +39,30 @@ class DomToMarkdownConverter {
         /**
          * @var {HtmlToMarkdownError[]}
          */
-        options = options || {};
-        this.errors = [];
+        options = options || {}
+        this.errors = []
         this.options = {
             throwOnError: options.throwOnError || false
-        };
+        }
     }
 
     getBlockMarkdown(block) {
-        const self = this;
-        const document = new MarkdownDocument();
+        const self = this
+        const document = new MarkdownDocument()
 
         /**
          * @param {Node|Element} node
          */
         function walk(node) {
             if (self._isTextNode(node)) {
-                document.addInlineMarkdown(self.getInlineMarkdown(node));
-                return;
+                document.addInlineMarkdown(self.getInlineMarkdown(node))
+                return
             }
             if (self._isElementNode(node)) {
-                const tag = node.tagName.toLowerCase();
+                const tag = node.tagName.toLowerCase()
                 if (self._isInlineTag(tag)) {
-                    document.addInlineMarkdown(self.getInlineMarkdown(node));
-                    return;
+                    document.addInlineMarkdown(self.getInlineMarkdown(node))
+                    return
                 }
 
                 switch (tag) {
@@ -71,50 +71,113 @@ class DomToMarkdownConverter {
                     case 'p':
                         document.finishBlock()
                         for (let i = 0; i < node.childNodes.length; i++) {
-                            walk(node.childNodes[i]);
+                            walk(node.childNodes[i])
                         }
                         document.finishBlock()
-                        break;
+                        break
 
                     case 'h1':
-                        document.addHeader(1, self.getInlineMarkdown(node));
-                        break;
+                        document.addHeader(1, self.getInlineMarkdown(node))
+                        break
 
                     case 'h2':
-                        document.addHeader(2, self.getInlineMarkdown(node));
-                        break;
+                        document.addHeader(2, self.getInlineMarkdown(node))
+                        break
 
                     case 'h3':
-                        document.addHeader(3, self.getInlineMarkdown(node));
-                        break;
+                        document.addHeader(3, self.getInlineMarkdown(node))
+                        break
 
                     case 'h4':
-                        document.addHeader(4, self.getInlineMarkdown(node));
-                        break;
+                        document.addHeader(4, self.getInlineMarkdown(node))
+                        break
 
                     case 'h5':
-                        document.addHeader(5, self.getInlineMarkdown(node));
-                        break;
+                        document.addHeader(5, self.getInlineMarkdown(node))
+                        break
 
                     case 'h6':
-                        document.addHeader(6, self.getInlineMarkdown(node));
-                        break;
+                        document.addHeader(6, self.getInlineMarkdown(node))
+                        break
+
+                    case 'table':
+                        document.addTable(self._getTableContents(node))
+                        break
 
                     default:
-                        self._addError(`Unexpected HTML tag "${tag}": `, node);
+                        self._addError(`Unexpected HTML tag "${tag}": `, node)
                         document.finishBlock()
                         for (let i = 0; i < node.childNodes.length; i++) {
-                            walk(node.childNodes[i]);
+                            walk(node.childNodes[i])
                         }
                         document.finishBlock()
-                        break;
+                        break
                 }
             }
         }
 
-        walk(block);
+        walk(block)
 
-        return document.finish();
+        return document.finish()
+    }
+
+    /**
+     * @param {HTMLElement} table
+     * @return {string[][]}
+     */
+    _getTableContents(table) {
+        const self = this
+
+        function collectTrNodesRecursive(trNodes, node) {
+            if (self._isElementNode(node)) {
+                const tag = node.tagName.toLowerCase()
+                switch (tag) {
+                    case 'table':
+                    case 'thead':
+                    case 'tbody':
+                    case 'tfoot':
+                        for (let i = 0; i < node.childNodes.length; i++) {
+                            collectTrNodesRecursive(trNodes, node.childNodes[i])
+                        }
+                        break
+                    case 'tr':
+                        trNodes.push(node)
+                        break
+                }
+            }
+        }
+        function collectTrNodes(node) {
+            const trNodes = []
+            collectTrNodesRecursive(trNodes, node)
+            return trNodes
+        }
+
+        function collectTdNodes(tr) {
+            const tdNodes = []
+            for (let i = 0; i < tr.childNodes.length; i++) {
+                const child = tr.childNodes[i]
+                if (self._isElementNode(child)) {
+                    const tag = child.tagName.toLowerCase()
+                    if (tag === 'td' || tag === 'th') {
+                        tdNodes.push(child)
+                    }
+                }
+            }
+            return tdNodes
+        }
+
+        const rows = []
+        collectTrNodes(table).forEach((tr) => {
+            const row = []
+            collectTdNodes(tr).forEach((td) => {
+                row.push(this.getInlineMarkdown(td))
+            })
+            if (row.length > 0) {
+                rows.push(row)
+            }
+        })
+
+        return rows
     }
 
     /**
@@ -124,8 +187,8 @@ class DomToMarkdownConverter {
      * @returns {string}
      */
     getInlineMarkdown(block) {
-        const self = this;
-        let chunks = [];
+        const self = this
+        let chunks = []
 
         /**
          * @param {Node|Element} node
@@ -133,119 +196,119 @@ class DomToMarkdownConverter {
          */
         function walk(node, expectBlock) {
             if (self._isTextNode(node)) {
-                chunks.push(TextUtil.cleanInlineText(node.textContent));
+                chunks.push(TextUtil.cleanInlineText(node.textContent))
             } else if (self._isElementNode(node)) {
-                const tag = node.tagName.toLowerCase();
+                const tag = node.tagName.toLowerCase()
                 switch (tag) {
                     case 'strong':
                     case 'b':
                         {
-                            const text = self.getInlineText(node);
+                            const text = self.getInlineText(node)
                             if (text) {
-                                chunks.push('**' + text + '**');
+                                chunks.push('**' + text + '**')
                             }
                         }
-                        break;
+                        break
 
                     case 'em':
                     case 'i':
                         {
-                            const text = self.getInlineText(node);
+                            const text = self.getInlineText(node)
                             if (text) {
-                                chunks.push('_' + text + '_');
+                                chunks.push('_' + text + '_')
                             }
                         }
-                        break;
+                        break
 
                     case 'u':
                     case 'ins':
                         {
-                            const text = self.getInlineText(node);
+                            const text = self.getInlineText(node)
                             if (text) {
-                                chunks.push('<ins>' + text + '</ins>');
+                                chunks.push('<ins>' + text + '</ins>')
                             }
                         }
-                        break;
+                        break
 
                     case 's':
                     case 'del':
                         {
-                            const text = self.getInlineText(node);
+                            const text = self.getInlineText(node)
                             if (text) {
-                                chunks.push('<del>' + text + '</del>');
+                                chunks.push('<del>' + text + '</del>')
                             }
                         }
-                        break;
+                        break
 
                     case 'sup':
                         {
-                            const text = self.getInlineText(node);
+                            const text = self.getInlineText(node)
                             if (text) {
-                                chunks.push('<sup>' + text + '</sup>');
+                                chunks.push('<sup>' + text + '</sup>')
                             }
                         }
-                        break;
+                        break
 
                     case 'sub':
                         {
-                            const text = self.getInlineText(node);
+                            const text = self.getInlineText(node)
                             if (text) {
-                                chunks.push('<sub>' + text + '</sub>');
+                                chunks.push('<sub>' + text + '</sub>')
                             }
                         }
-                        break;
+                        break
 
                     case 'tt':
                     case 'code':
                         {
-                            const text = self.getInlineText(node);
+                            const text = self.getInlineText(node)
                             if (text) {
-                                chunks.push('`' + text + '`');
+                                chunks.push('`' + text + '`')
                             }
                         }
-                        break;
+                        break
 
                     case 'img':
                         {
-                            const alt = node.getAttribute('alt');
-                            const src = node.getAttribute('src');
-                            const title = node.getAttribute('title');
+                            const alt = node.getAttribute('alt')
+                            const src = node.getAttribute('src')
+                            const title = node.getAttribute('title')
                             if (!src) {
                                 self._addError(`Image "${tag}" has no "src" attribute: `, node)
                             } else {
-                                chunks.push(title ? `![${alt}](${src} "${title}")` : `![${alt}](${src})`);
+                                chunks.push(title ? `![${alt}](${src} "${title}")` : `![${alt}](${src})`)
                             }
                         }
-                        break;
+                        break
 
                     case 'a':
                         {
-                            const text = self.getInlineText(node);
-                            const href = node.getAttribute('href');
-                            const title = node.getAttribute('title');
+                            const text = self.getInlineText(node)
+                            const href = node.getAttribute('href')
+                            const title = node.getAttribute('title')
                             if (!href) {
-                                self._addError(`Hyperlink "${tag}" has no "href" attribute`, node);
+                                self._addError(`Hyperlink "${tag}" has no "href" attribute`, node)
                             } else {
-                                chunks.push(title ? `[${text}](${href} "${title}")` : `[${text}](${href})`);
+                                chunks.push(title ? `[${text}](${href} "${title}")` : `[${text}](${href})`)
                             }
                         }
-                        break;
+                        break
 
                     default:
                         if (!expectBlock) {
-                            self._addError(`Unexpected inline HTML tag "${tag}": `, node);
+                            self._addError(`Unexpected inline HTML tag "${tag}": `, node)
                         }
                         for (let i = 0; i < node.childNodes.length; i++) {
-                            walk(node.childNodes[i]);
+                            walk(node.childNodes[i])
                         }
-                        break;
+                        break
                 }
             }
         }
 
-        walk(block, true);
+        walk(block, true)
 
-        return this.joinInlineMarkdown(chunks);
+        return this.joinInlineMarkdown(chunks)
     }
 
     /**
@@ -258,25 +321,25 @@ class DomToMarkdownConverter {
      * @returns {string}
      */
     joinInlineMarkdown(chunks) {
-        let result = '';
-        let needsSpace = false;
+        let result = ''
+        let needsSpace = false
         for (const text of chunks) {
-            const textTrimmedStart = text.trimStart();
-            const textTrimmedEnd = textTrimmedStart.trimEnd();
+            const textTrimmedStart = text.trimStart()
+            const textTrimmedEnd = textTrimmedStart.trimEnd()
 
             if (textTrimmedEnd != '') {
                 if (needsSpace || (textTrimmedStart !== text)) {
-                    result += ' ';
+                    result += ' '
                 }
                 if (textTrimmedEnd) {
-                    result += textTrimmedEnd;
+                    result += textTrimmedEnd
                 }
-                needsSpace = (textTrimmedEnd != textTrimmedStart);
+                needsSpace = (textTrimmedEnd != textTrimmedStart)
             } else {
-                needsSpace = needsSpace || (text != '');
+                needsSpace = needsSpace || (text != '')
             }
         }
-        return result.trimStart();
+        return result.trimStart()
     }
 
     /**
@@ -286,24 +349,24 @@ class DomToMarkdownConverter {
      * @returns {string}
      */
     getInlineText(block) {
-        const self = this;
-        let chunks = [];
+        const self = this
+        let chunks = []
 
         /**
          * @param {Node|Element} node
          */
         function walk(node) {
             if (self._isTextNode(node)) {
-                chunks.push(TextUtil.cleanInlineText(node.textContent));
+                chunks.push(TextUtil.cleanInlineText(node.textContent))
             } else if (self._isElementNode(node)) {
                 for (let i = 0; i < node.childNodes.length; i++) {
-                    walk(node.childNodes[i]);
+                    walk(node.childNodes[i])
                 }
             }
         }
-        walk(block);
+        walk(block)
 
-        return TextUtil.joinInlineText(chunks);
+        return TextUtil.joinInlineText(chunks)
     }
 
     /**
@@ -311,7 +374,7 @@ class DomToMarkdownConverter {
      * @returns {boolean}
      */
     _isTextNode(node) {
-        return node.nodeType == 3;
+        return node.nodeType == 3
     }
 
     /**
@@ -319,7 +382,7 @@ class DomToMarkdownConverter {
      * @returns {boolean}
      */
     _isElementNode(node) {
-        return node.nodeType == 1;
+        return node.nodeType == 1
     }
 
     /**
@@ -342,10 +405,10 @@ class DomToMarkdownConverter {
             case 'code':
             case 'img':
             case 'a':
-                return true;
+                return true
 
             default:
-                return false;
+                return false
         }
     }
 
@@ -354,13 +417,13 @@ class DomToMarkdownConverter {
      * @param {Node} node 
      */
     _addError(message, node) {
-        const error = new DomToMarkdownError(message, node);
+        const error = new DomToMarkdownError(message, node)
         if (this.options.throwOnError) {
-            throw error.toError();
+            throw error.toError()
         }
-        this.errors.push(error);
+        this.errors.push(error)
     }
 }
 
-module.exports.DomToMarkdownError = DomToMarkdownError;
-module.exports.DomToMarkdownConverter = DomToMarkdownConverter;
+module.exports.DomToMarkdownError = DomToMarkdownError
+module.exports.DomToMarkdownConverter = DomToMarkdownConverter

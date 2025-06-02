@@ -47,6 +47,44 @@ class MarkdownDocument {
     }
 
     /**
+     * Добавляет таблицу
+     * @param {string[][]} rows - массив строк таблицы, где каждая строка — это массив
+     *   текстов с markdown-разметкой. Первая строка — заголовки столбцов.
+     */
+    addTable(rows) {
+        if (rows.length < 2) {
+            throw new Error('Table should have at least 2 rows: one for headers, others for data');
+        }
+
+        const columnCount = rows[0].length;
+        if (columnCount === 0) {
+            throw new Error('Table should have at least 1 column');
+        }
+
+        for (let rowIndex = 1; rowIndex < rows.length; ++rowIndex) {
+            const rowColumnCount = rows[rowIndex].length;
+            if (rowColumnCount != columnCount) {
+                throw new Error(
+                    'Table rows have inconsistent length: ' +
+                    `header has ${columnCount} columns, ` +
+                    `row ${rowIndex} has ${rowColumnCount} columns`
+                );
+            }
+        }
+
+        const lines = [];
+        lines.push('|' + rows[0].join('|') + '|');
+        lines.push('|' + '---|'.repeat(rows[0].length));
+        for (const row of rows.slice(1)) {
+            lines.push('|' + row.join('|') + '|');
+        }
+
+        this.finishBlock();
+        this._currentBlock = lines.join('\n');
+        this.finishBlock();
+    }
+
+    /**
      * Добавляет блок кода
      * @param {string} language - код формального языка, например, `python` или `csharp`
      * @param {string} code - форматированный многострочный код
