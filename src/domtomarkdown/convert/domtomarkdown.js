@@ -96,6 +96,10 @@ class DomToMarkdownConverter {
                         document.addList(self._getMarkdownList(node))
                         break
 
+                    case 'pre':
+                        document.addCode(self._getPreformattedCodeLanguage(node), self._getPreformattedCode(node))
+                        break
+
                     default:
                         self._addError(`Unexpected HTML tag "${tag}": `, node)
                         document.finishBlock()
@@ -197,6 +201,91 @@ class DomToMarkdownConverter {
         })
 
         return rows
+    }
+
+    /**
+     * Получает язык программирования блока кода путём эвристик:
+     * - обходит следующие элементы: <pre>, единственный дочерний узел <pre>, цепочка предков <pre> с тегом code, <div>
+     * - предполагает, что язык задан в атрибуте class в формате `language-<lang>`
+     *
+     * @param {HTMLPreElement} pre 
+     */
+    _getPreformattedCodeLanguage(pre) {
+
+        /**
+         * @param {HTMLElement} node
+         * @returns {string|undefined}
+         */
+        function findLanguageByClass(node) {
+            const prefix = 'language-'
+            for (const className of node.classList.values()) {
+                if (className.startsWith(prefix)) {
+                    return className.substring(prefix.length)
+                }
+            }
+            return undefined
+        }
+
+        let language = findLanguageByClass(pre)
+        if (language) {
+            return language
+        }
+        if (pre.childNodes.length === 1) {
+            const child = pre.childNodes[0]
+            if (NodeType.isElement(child)) {
+                language = findLanguageByClass(child)
+                if (language) {
+                    return language
+                }
+            }
+        }
+        for (let parent = pre.parentElement; parent; parent = parent.parentElement) {
+            if (parent.tagName.toLowerCase() !== 'div') {
+                break
+            }
+            language = findLanguageByClass(parent)
+            if (language) {
+                return language
+            }
+        }
+        return ''
+    }
+
+    /**
+     * Получает содержимое <pre> как код с заданным форматированием,
+     *  при этом <br> превращается в перенос строки.
+     *
+     * @param {HTMLPreElement} pre 
+     */
+    _getPreformattedCode(pre) {
+        let code = ''
+
+        /**
+         * @param {HTMLElement} node
+         */
+        function walk(node) {
+            if (NodeType.isText(node)) {
+                code += node.textContent
+            } else if (NodeType.isElement(node)) {
+                const tag = node.tagName.toLowerCase()
+                if (tag === 'br') {
+                    code += '\n'
+                } else {
+                    NodeScanner.scanChildNodes(node, walk)
+                }
+            }
+        }
+
+        walk(pre)
+
+        if (code.startsWith('\n')) {
+            code = code.substring(1)
+        }
+        if (code.endsWith('\n')) {
+            code = code.substring(0, code.length - 1)
+        }
+
+        return code
     }
 
     /**

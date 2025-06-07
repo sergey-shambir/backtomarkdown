@@ -108,9 +108,17 @@ class MarkdownDocument {
             throw new Error('Code cannot be empty')
         }
 
-        // TODO: экранировать блоки кода, содержащие произвольное число символов '`' подряд
+        const backquotesCount = this._countCodeBackquotesCount(code)
+        const backquotes = '`'.repeat(backquotesCount)
+
+        const results = /`+/g
+        let maxBackquotesCount = 0
+        for (let match = results.exec(code); match; match = results.exec(code)) {
+            maxBackquotesCount = Math.max(maxBackquotesCount, match[0].length)
+        }
+
         this.finishBlock()
-        this._currentBlock = '```' + language + '\n' + code + '\n```'
+        this._currentBlock = backquotes + language + '\n' + code + '\n' + backquotes
         this.finishBlock()
     }
 
@@ -128,6 +136,23 @@ class MarkdownDocument {
     toMarkdown() {
         this.finishBlock()
         return this._blocks.join("\n\n")
+    }
+
+    /**
+     * Определяет число символов backquote (`) для экранирования блока кода
+     * 
+     * @param {string} code
+     * @returns {number}
+     */
+    _countCodeBackquotesCount(code) {
+        let maxBackquotesCount = 3 // По умолчанию блок кода экранируется 3 символами backquote (`).
+
+        const results = /`+/g
+        for (let match = results.exec(code); match; match = results.exec(code)) {
+            maxBackquotesCount = Math.max(maxBackquotesCount, match[0].length + 1)
+        }
+
+        return maxBackquotesCount
     }
 }
 

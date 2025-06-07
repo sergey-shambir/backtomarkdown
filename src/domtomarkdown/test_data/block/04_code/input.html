@@ -1,0 +1,20 @@
+<div class="container-narrow">
+<h2 id="wow0">Простая программа со сборкой через CMake</h2>
+<ul>
+  <li>Создайте в каталоге <code class="highlighter-rouge">sfml.1</code> файл с именем <code class="highlighter-rouge">CMakeLists.txt</code></li>
+  <li>Скопируйте следующий текст в файл и сохраните в этом файле:</li>
+</ul>
+<div class="language-cmake highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Минимальная версия CMake: 3.8</span>
+<span class="nb">cmake_minimum_required</span><span class="p">(</span>VERSION 3.8 FATAL_ERROR<span class="p">)</span>
+
+<span class="c1"># Имя проекта: sfml-lab-1</span>
+<span class="nb">project</span><span class="p">(</span>sfml-lab-1<span class="p">)</span>
+
+<span class="c1"># Подкаталог 00 содержит ещё один CMakeLists.txt</span>
+<span class="nb">add_subdirectory</span><span class="p">(</span>00<span class="p">)</span>
+</code></pre></div></div>
+
+<pre class="language-html"><code class="language-html"><span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>blockquote</span><span class="token punctuation">&gt;</span></span><br>	<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>p</span><span class="token punctuation">&gt;</span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>strong</span><span class="token punctuation">&gt;</span></span>Виктор<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>strong</span><span class="token punctuation">&gt;</span></span>: Да. Виноват. Понимаешь, он мне что-то нравится.<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>p</span><span class="token punctuation">&gt;</span></span><br>	<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>p</span><span class="token punctuation">&gt;</span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>strong</span><span class="token punctuation">&gt;</span></span>Диана<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>strong</span><span class="token punctuation">&gt;</span></span>: А мне — нет<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>p</span><span class="token punctuation">&gt;</span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>blockquote</span><span class="token punctuation">&gt;</span></span>
+</code></pre>
+</div>

@@ -25,7 +25,8 @@ describe('domtomarkdown module', () => {
     test.each([
         'block/01_paragraphs',
         'block/02_table',
-        'block/03_lists'
+        'block/03_lists',
+        'block/04_code'
     ])('can parse block html at "%s"', async (dir) => {
         const { input, expected } = await loadTestFilesAsync(dir);
         const fragment = JSDOM.fragment(input);

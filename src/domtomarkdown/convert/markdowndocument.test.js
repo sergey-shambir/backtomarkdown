@@ -49,6 +49,7 @@ World`)
         document.addCode('bash', 'go test -v')
         document.addParagraph('Result:')
         document.addCode('', '?       backtomarkdown  [no test files]')
+        document.addCode('', 'Five backquotes: `````')
         expect(document.toMarkdown()).toEqual(
             `Run tests:
 
@@ -60,7 +61,11 @@ Result:
 
 \`\`\`
 ?       backtomarkdown  [no test files]
-\`\`\``)
+\`\`\`
+
+\`\`\`\`\`\`
+Five backquotes: \`\`\`\`\`
+\`\`\`\`\`\``)
     })
 
     it('can add table', () => {

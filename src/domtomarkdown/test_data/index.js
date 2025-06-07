@@ -9,10 +9,10 @@ const readFileAsync = promisify(fs.readFile);
  * @param {string} dir 
  * @param {string} inputExt 
  * @param {string} expectedExt 
- * @returns {{
+ * @returns {Promise<{
  *   input: string,
  *   expected: string
- * }}
+ * }>}
  */
 async function loadTestFilesAsync(dir, inputExt = '.html', expectedExt = '.md') {
     const absDirPath = path.join(__dirname, ...dir.split('/').filter((s) => s !== ''));
