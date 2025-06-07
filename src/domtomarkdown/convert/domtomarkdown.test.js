@@ -18,13 +18,14 @@ describe('domtomarkdown module', () => {
         const converter = new DomToMarkdownConverter({
             throwOnError: true
         });
-        const markdown = converter.getInlineMarkdown(fragment.children[0]);
+        const markdown = converter.getBlockInlineMarkdown(fragment.children[0]);
         expect(markdown).toBe(expected);
     })
 
     test.each([
         'block/01_paragraphs',
         'block/02_table',
+        'block/03_lists'
     ])('can parse block html at "%s"', async (dir) => {
         const { input, expected } = await loadTestFilesAsync(dir);
         const fragment = JSDOM.fragment(input);

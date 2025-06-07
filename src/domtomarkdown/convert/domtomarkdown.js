@@ -1,4 +1,7 @@
 const { MarkdownDocument } = require('./markdowndocument')
+const { MarkdownUnorderedList, MarkdownOrderedList, MarkdownDefinitionList } = require('./markdownlist')
+const { NodeScanner } = require('./nodescanner')
+const { NodeType } = require('./nodetype')
 const { TextUtil } = require('./textutil')
 
 class DomToMarkdownError {
@@ -37,7 +40,7 @@ class DomToMarkdownConverter {
      */
     constructor(options) {
         /**
-         * @var {HtmlToMarkdownError[]}
+         * type {HtmlToMarkdownError[]}
          */
         options = options || {}
         this.errors = []
@@ -54,14 +57,14 @@ class DomToMarkdownConverter {
          * @param {Node|Element} node
          */
         function walk(node) {
-            if (self._isTextNode(node)) {
-                document.addInlineMarkdown(self.getInlineMarkdown(node))
+            if (NodeType.isText(node)) {
+                document.addInlineMarkdown(self.getNodesInlineMarkdown([node]))
                 return
             }
-            if (self._isElementNode(node)) {
+            if (NodeType.isElement(node)) {
                 const tag = node.tagName.toLowerCase()
                 if (self._isInlineTag(tag)) {
-                    document.addInlineMarkdown(self.getInlineMarkdown(node))
+                    document.addInlineMarkdown(self.getNodesInlineMarkdown([node]))
                     return
                 }
 
@@ -70,46 +73,33 @@ class DomToMarkdownConverter {
                     case 'article':
                     case 'p':
                         document.finishBlock()
-                        for (let i = 0; i < node.childNodes.length; i++) {
-                            walk(node.childNodes[i])
-                        }
+                        NodeScanner.scanChildNodes(node, walk)
                         document.finishBlock()
                         break
 
                     case 'h1':
-                        document.addHeader(1, self.getInlineMarkdown(node))
-                        break
-
                     case 'h2':
-                        document.addHeader(2, self.getInlineMarkdown(node))
-                        break
-
                     case 'h3':
-                        document.addHeader(3, self.getInlineMarkdown(node))
-                        break
-
                     case 'h4':
-                        document.addHeader(4, self.getInlineMarkdown(node))
-                        break
-
                     case 'h5':
-                        document.addHeader(5, self.getInlineMarkdown(node))
-                        break
-
                     case 'h6':
-                        document.addHeader(6, self.getInlineMarkdown(node))
+                        document.addHeader(parseInt(tag[1]), self.getBlockInlineMarkdown(node))
                         break
 
                     case 'table':
                         document.addTable(self._getTableContents(node))
                         break
 
+                    case 'ul':
+                    case 'ol':
+                    case 'dl':
+                        document.addList(self._getMarkdownList(node))
+                        break
+
                     default:
                         self._addError(`Unexpected HTML tag "${tag}": `, node)
                         document.finishBlock()
-                        for (let i = 0; i < node.childNodes.length; i++) {
-                            walk(node.childNodes[i])
-                        }
+                        NodeScanner.scanChildNodes(node, walk)
                         document.finishBlock()
                         break
                 }
@@ -118,59 +108,88 @@ class DomToMarkdownConverter {
 
         walk(block)
 
-        return document.finish()
+        return document.toMarkdown()
     }
 
     /**
-     * @param {HTMLElement} table
+     * 
+     * @param {HTMLUListElement|HTMLOListElement|HTMLDListElement} node 
+     */
+    _getMarkdownList(node) {
+        const tag = node.tagName.toLowerCase()
+
+        /**
+         * Собирает дочерние узлы элемента списка до первого вложенного списка.
+         * @param {HTMLElement} li
+         * @returns {{nodes:HTMLElement[], nestedList:HTMLElement|null}}
+         */
+        function splitListItemChildren(li) {
+            const nodes = []
+            let nestedList = null
+            for (let i = 0; i < li.childNodes.length; ++i) {
+                const child = li.childNodes[i]
+                if (NodeType.isElement(child) && ['ul', 'ol', 'dl'].includes(child.tagName.toLowerCase())) {
+                    nestedList = child
+                    break
+                } else {
+                    nodes.push(child)
+                }
+            }
+            return {
+                nodes: nodes,
+                nestedList: nestedList
+            }
+        }
+
+        switch (tag) {
+            case 'ul':
+                {
+                    const list = new MarkdownUnorderedList()
+                    NodeScanner.scanListItems(node, (li) => {
+                        const { nodes, nestedList } = splitListItemChildren(li)
+                        const label = this.getNodesInlineMarkdown(nodes)
+                        const nested = nestedList ? this._getMarkdownList(nestedList) : null
+                        list.add(label, nested)
+                    })
+                    return list
+                }
+
+            case 'ol':
+                {
+                    const list = new MarkdownOrderedList()
+                    NodeScanner.scanListItems(node, (li) => {
+                        const { nodes, nestedList } = splitListItemChildren(li)
+                        const label = this.getNodesInlineMarkdown(nodes)
+                        const nested = nestedList ? this._getMarkdownList(nestedList) : null
+                        list.add(label, nested)
+                    })
+                    return list
+                }
+
+            case 'dl':
+                {
+                    const list = new MarkdownDefinitionList()
+                    NodeScanner.scanDefinitions(node, (term, definitions) => {
+                        list.add(this.getBlockInlineMarkdown(term), definitions.map((d) => this.getBlockInlineMarkdown(d)))
+                    })
+                    return list
+                }
+
+            default:
+                throw new Error(`Unexpected list tag ${tag}`)
+        }
+    }
+
+    /**
+     * @param {HTMLTableElement} table
      * @return {string[][]}
      */
     _getTableContents(table) {
-        const self = this
-
-        function collectTrNodesRecursive(trNodes, node) {
-            if (self._isElementNode(node)) {
-                const tag = node.tagName.toLowerCase()
-                switch (tag) {
-                    case 'table':
-                    case 'thead':
-                    case 'tbody':
-                    case 'tfoot':
-                        for (let i = 0; i < node.childNodes.length; i++) {
-                            collectTrNodesRecursive(trNodes, node.childNodes[i])
-                        }
-                        break
-                    case 'tr':
-                        trNodes.push(node)
-                        break
-                }
-            }
-        }
-        function collectTrNodes(node) {
-            const trNodes = []
-            collectTrNodesRecursive(trNodes, node)
-            return trNodes
-        }
-
-        function collectTdNodes(tr) {
-            const tdNodes = []
-            for (let i = 0; i < tr.childNodes.length; i++) {
-                const child = tr.childNodes[i]
-                if (self._isElementNode(child)) {
-                    const tag = child.tagName.toLowerCase()
-                    if (tag === 'td' || tag === 'th') {
-                        tdNodes.push(child)
-                    }
-                }
-            }
-            return tdNodes
-        }
-
         const rows = []
-        collectTrNodes(table).forEach((tr) => {
+        NodeScanner.scanTableRows(table, (tr) => {
             const row = []
-            collectTdNodes(tr).forEach((td) => {
-                row.push(this.getInlineMarkdown(td))
+            NodeScanner.scanTableColumns(tr, (td) => {
+                row.push(this.getBlockInlineMarkdown(td))
             })
             if (row.length > 0) {
                 rows.push(row)
@@ -186,129 +205,103 @@ class DomToMarkdownConverter {
      * @param {Node} block
      * @returns {string}
      */
-    getInlineMarkdown(block) {
+    getBlockInlineMarkdown(block) {
+        return this.getNodesInlineMarkdown([...block.childNodes])
+    }
+
+    /**
+     * Разбирает DOM-узлы, относящиеся к одному параграфу текста с inline-тегами форматирования.
+     *
+     * @param {Node[]} nodes
+     * @returns {string}
+     */
+    getNodesInlineMarkdown(nodes) {
         const self = this
-        let chunks = []
+        const chunks = []
+
+        const wrapperTagRules = {
+            'strong': ['**', '**'],
+            'b': ['**', '**'],
+            'em': ['_', '_'],
+            'i': ['_', '_'],
+            'u': ['<ins>', '</ins>'],
+            'ins': ['<ins>', '</ins>'],
+            's': ['<del>', '</del>'],
+            'del': ['<del>', '</del>'],
+            'sup': ['<sup>', '</sup>'],
+            'sub': ['<sub>', '</sub>'],
+            'tt': ['`', '`'],
+            'code': ['`', '`'],
+        }
 
         /**
          * @param {Node|Element} node
-         * @param {boolean} expectBlock
          */
-        function walk(node, expectBlock) {
-            if (self._isTextNode(node)) {
+        function walk(node) {
+            if (NodeType.isText(node)) {
                 chunks.push(TextUtil.cleanInlineText(node.textContent))
-            } else if (self._isElementNode(node)) {
+            } else if (NodeType.isElement(node)) {
                 const tag = node.tagName.toLowerCase()
-                switch (tag) {
-                    case 'strong':
-                    case 'b':
-                        {
-                            const text = self.getInlineText(node)
-                            if (text) {
-                                chunks.push('**' + text + '**')
-                            }
-                        }
-                        break
-
-                    case 'em':
-                    case 'i':
-                        {
-                            const text = self.getInlineText(node)
-                            if (text) {
-                                chunks.push('_' + text + '_')
-                            }
-                        }
-                        break
-
-                    case 'u':
-                    case 'ins':
-                        {
-                            const text = self.getInlineText(node)
-                            if (text) {
-                                chunks.push('<ins>' + text + '</ins>')
-                            }
-                        }
-                        break
-
-                    case 's':
-                    case 'del':
-                        {
-                            const text = self.getInlineText(node)
-                            if (text) {
-                                chunks.push('<del>' + text + '</del>')
-                            }
-                        }
-                        break
-
-                    case 'sup':
-                        {
-                            const text = self.getInlineText(node)
-                            if (text) {
-                                chunks.push('<sup>' + text + '</sup>')
-                            }
-                        }
-                        break
-
-                    case 'sub':
-                        {
-                            const text = self.getInlineText(node)
-                            if (text) {
-                                chunks.push('<sub>' + text + '</sub>')
-                            }
-                        }
-                        break
-
-                    case 'tt':
-                    case 'code':
-                        {
-                            const text = self.getInlineText(node)
-                            if (text) {
-                                chunks.push('`' + text + '`')
-                            }
-                        }
-                        break
-
-                    case 'img':
-                        {
-                            const alt = node.getAttribute('alt')
-                            const src = node.getAttribute('src')
-                            const title = node.getAttribute('title')
-                            if (!src) {
-                                self._addError(`Image "${tag}" has no "src" attribute: `, node)
-                            } else {
-                                chunks.push(title ? `![${alt}](${src} "${title}")` : `![${alt}](${src})`)
-                            }
-                        }
-                        break
-
-                    case 'a':
-                        {
-                            const text = self.getInlineText(node)
-                            const href = node.getAttribute('href')
-                            const title = node.getAttribute('title')
-                            if (!href) {
-                                self._addError(`Hyperlink "${tag}" has no "href" attribute`, node)
-                            } else {
-                                chunks.push(title ? `[${text}](${href} "${title}")` : `[${text}](${href})`)
-                            }
-                        }
-                        break
-
-                    default:
-                        if (!expectBlock) {
-                            self._addError(`Unexpected inline HTML tag "${tag}": `, node)
-                        }
-                        for (let i = 0; i < node.childNodes.length; i++) {
-                            walk(node.childNodes[i])
-                        }
-                        break
+                const rule = wrapperTagRules[tag]
+                if (rule) {
+                    const text = self.getInlineText(node)
+                    if (text) {
+                        chunks.push(rule[0] + text + rule[1])
+                    }
+                } else if (tag === 'img') {
+                    const markdown = self._getInlineImageMarkdown(node)
+                    if (markdown !== undefined) {
+                        chunks.push(markdown)
+                    }
+                } else if (tag === 'a') {
+                    const markdown = self._getLinkMarkdown(node)
+                    if (markdown !== undefined) {
+                        chunks.push(markdown)
+                    }
+                } else if (tag === 'span') {
+                    NodeScanner.scanChildNodes(node, walk)
+                } else {
+                    self._addError(`Unexpected inline HTML tag "${tag}": `, node)
+                    NodeScanner.scanChildNodes(node, walk)
                 }
             }
         }
 
-        walk(block, true)
+        for (const node of nodes) {
+            walk(node)
+        }
 
         return this.joinInlineMarkdown(chunks)
+    }
+
+    /**
+     * @param {HTMLElement} node 
+     * @returns {string|undefined}
+     */
+    _getInlineImageMarkdown(node) {
+        const alt = node.getAttribute('alt')
+        const src = node.getAttribute('src')
+        const title = node.getAttribute('title')
+        if (!src) {
+            this._addError(`Image "${tag}" has no "src" attribute: `, node)
+            return undefined
+        }
+        return title ? `![${alt}](${src} "${title}")` : `![${alt}](${src})`
+    }
+
+    /**
+     * @param {HTMLElement} node 
+     * @returns {string|undefined}
+     */
+    _getLinkMarkdown(node) {
+        const text = this.getInlineText(node)
+        const href = node.getAttribute('href')
+        const title = node.getAttribute('title')
+        if (!href) {
+            this._addError(`Hyperlink "${tag}" has no "href" attribute`, node)
+            return undefined
+        }
+        return title ? `[${text}](${href} "${title}")` : `[${text}](${href})`
     }
 
     /**
@@ -349,40 +342,21 @@ class DomToMarkdownConverter {
      * @returns {string}
      */
     getInlineText(block) {
-        const self = this
         let chunks = []
 
         /**
          * @param {Node|Element} node
          */
         function walk(node) {
-            if (self._isTextNode(node)) {
+            if (NodeType.isText(node)) {
                 chunks.push(TextUtil.cleanInlineText(node.textContent))
-            } else if (self._isElementNode(node)) {
-                for (let i = 0; i < node.childNodes.length; i++) {
-                    walk(node.childNodes[i])
-                }
+            } else if (NodeType.isElement(node)) {
+                NodeScanner.scanChildNodes(node, walk)
             }
         }
         walk(block)
 
         return TextUtil.joinInlineText(chunks)
-    }
-
-    /**
-     * @param {Node} node 
-     * @returns {boolean}
-     */
-    _isTextNode(node) {
-        return node.nodeType == 3
-    }
-
-    /**
-     * @param {Node} node 
-     * @returns {boolean}
-     */
-    _isElementNode(node) {
-        return node.nodeType == 1
     }
 
     /**
@@ -405,6 +379,7 @@ class DomToMarkdownConverter {
             case 'code':
             case 'img':
             case 'a':
+            case 'span':
                 return true
 
             default:

@@ -1,11 +1,12 @@
 const { MarkdownDocument } = require('./markdowndocument')
+const { MarkdownOrderedList, MarkdownUnorderedList } = require('./markdownlist')
 
 describe('markdowndocument module', () => {
     it('can add text to current block', () => {
         const document = new MarkdownDocument()
         document.addInlineMarkdown('_Hello_')
         document.addInlineMarkdown(' World')
-        expect(document.finish()).toEqual('_Hello_ World')
+        expect(document.toMarkdown()).toEqual('_Hello_ World')
     })
 
     it('can finish block explicitly', () => {
@@ -13,7 +14,7 @@ describe('markdowndocument module', () => {
         document.addInlineMarkdown('**Hello**')
         document.finishBlock()
         document.addInlineMarkdown('World')
-        expect(document.finish()).toEqual('**Hello**\n\nWorld')
+        expect(document.toMarkdown()).toEqual('**Hello**\n\nWorld')
     })
 
     it('can add header', () => {
@@ -21,7 +22,7 @@ describe('markdowndocument module', () => {
         document.addHeader(1, 'Hello')
         document.addInlineMarkdown('Brave New')
         document.addHeader(2, 'World')
-        expect(document.finish()).toEqual(
+        expect(document.toMarkdown()).toEqual(
             `# Hello
 
 Brave New
@@ -34,7 +35,7 @@ Brave New
         document.addHeader(1, 'Hello')
         document.addParagraph('Brave New')
         document.addInlineMarkdown('World')
-        expect(document.finish()).toEqual(
+        expect(document.toMarkdown()).toEqual(
             `# Hello
 
 Brave New
@@ -48,7 +49,7 @@ World`)
         document.addCode('bash', 'go test -v')
         document.addParagraph('Result:')
         document.addCode('', '?       backtomarkdown  [no test files]')
-        expect(document.finish()).toEqual(
+        expect(document.toMarkdown()).toEqual(
             `Run tests:
 
 \`\`\`bash
@@ -72,7 +73,7 @@ Result:
         ])
         document.addParagraph('Ernest Miller Hemingway was an American novelist, short-story writer and journalist')
 
-        expect(document.finish()).toEqual(
+        expect(document.toMarkdown()).toEqual(
             `# Writers about activism and social change
 
 |Born|Name|Country|
@@ -81,6 +82,51 @@ Result:
 |1949|Axel Honneth|Germany|
 
 Ernest Miller Hemingway was an American novelist, short-story writer and journalist`)
+    })
+
+    it('can add unordered list', () => {
+        const ul = new MarkdownUnorderedList()
+        ul.add('The Old Man and the Sea')
+        ul.add('For Whom the Bell Tolls')
+        ul.add('A Farewell to Arms')
+
+        const document = new MarkdownDocument()
+        document.addHeader(2, 'Notable Novels')
+        document.addParagraph('Works of fiction include:')
+        document.addList(ul)
+        document.addParagraph('These novels explore themes of courage and human struggle.')
+
+        expect(document.toMarkdown()).toEqual(
+            `## Notable Novels
+
+Works of fiction include:
+
+* The Old Man and the Sea
+* For Whom the Bell Tolls
+* A Farewell to Arms
+
+These novels explore themes of courage and human struggle.`)
+    })
+
+    it('can add ordered list', () => {
+        const ol = new MarkdownOrderedList()
+        ol.add('JavaScript')
+        ol.add('Python')
+        ol.add('Go')
+
+        const document = new MarkdownDocument()
+        document.addHeader(2, 'Top 3 Programming Languages')
+        document.addList(ol)
+        document.addParagraph('These languages dominate web development and data science.')
+
+        expect(document.toMarkdown()).toEqual(
+            `## Top 3 Programming Languages
+
+1. JavaScript
+2. Python
+3. Go
+
+These languages dominate web development and data science.`)
     })
 
     it('cannot add header without level', () => {

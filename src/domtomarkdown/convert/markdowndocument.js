@@ -1,12 +1,16 @@
+const { MarkdownList } = require('./markdownlist')
+
 class MarkdownDocument {
     constructor() {
-        this._blocks = [];
-        this._currentBlock = '';
+        /** type {string[]} */
+        this._blocks = []
+        /** type {string} */
+        this._currentBlock = ''
     }
 
     /** Добавляет текст в текущий блок. */
     addInlineMarkdown(text) {
-        this._currentBlock += text;
+        this._currentBlock += text
     }
 
     /**
@@ -17,19 +21,19 @@ class MarkdownDocument {
      */
     addHeader(level, markdown) {
         if (isNaN(level)) {
-            throw new Error('Header level must be an integer number in range 1..6, got ' + level);
+            throw new Error('Header level must be an integer number in range 1..6, got ' + level)
         }
-        const levelNum = Math.floor(Number(level));
+        const levelNum = Math.floor(Number(level))
         if (level != levelNum || levelNum < 1 || levelNum > 6) {
-            throw new Error('Header level must be an integer number in range 1..6, got ' + level);
+            throw new Error('Header level must be an integer number in range 1..6, got ' + level)
         }
         if (!markdown) {
-            throw new Error('Header text cannot be empty');
+            throw new Error('Header text cannot be empty')
         }
 
-        this.finishBlock();
-        this._currentBlock = '#'.repeat(levelNum) + ' ' + markdown;
-        this.finishBlock();
+        this.finishBlock()
+        this._currentBlock = '#'.repeat(levelNum) + ' ' + markdown
+        this.finishBlock()
     }
 
     /**
@@ -38,12 +42,12 @@ class MarkdownDocument {
      */
     addParagraph(markdown) {
         if (!markdown) {
-            throw new Error('Paragraph text cannot be empty');
+            throw new Error('Paragraph text cannot be empty')
         }
 
-        this.finishBlock();
-        this._currentBlock = markdown;
-        this.finishBlock();
+        this.finishBlock()
+        this._currentBlock = markdown
+        this.finishBlock()
     }
 
     /**
@@ -53,35 +57,45 @@ class MarkdownDocument {
      */
     addTable(rows) {
         if (rows.length < 2) {
-            throw new Error('Table should have at least 2 rows: one for headers, others for data');
+            throw new Error('Table should have at least 2 rows: one for headers, others for data')
         }
 
-        const columnCount = rows[0].length;
+        const columnCount = rows[0].length
         if (columnCount === 0) {
-            throw new Error('Table should have at least 1 column');
+            throw new Error('Table should have at least 1 column')
         }
 
         for (let rowIndex = 1; rowIndex < rows.length; ++rowIndex) {
-            const rowColumnCount = rows[rowIndex].length;
+            const rowColumnCount = rows[rowIndex].length
             if (rowColumnCount != columnCount) {
                 throw new Error(
                     'Table rows have inconsistent length: ' +
                     `header has ${columnCount} columns, ` +
                     `row ${rowIndex} has ${rowColumnCount} columns`
-                );
+                )
             }
         }
 
-        const lines = [];
-        lines.push('|' + rows[0].join('|') + '|');
-        lines.push('|' + '---|'.repeat(rows[0].length));
+        const lines = []
+        lines.push('|' + rows[0].join('|') + '|')
+        lines.push('|' + '---|'.repeat(rows[0].length))
         for (const row of rows.slice(1)) {
-            lines.push('|' + row.join('|') + '|');
+            lines.push('|' + row.join('|') + '|')
         }
 
-        this.finishBlock();
-        this._currentBlock = lines.join('\n');
-        this.finishBlock();
+        this.finishBlock()
+        this._currentBlock = lines.join('\n')
+        this.finishBlock()
+    }
+
+    /**
+     * Добавляет нумерованный либо ненумерованный список
+     * @param {MarkdownList} list
+     */
+    addList(list) {
+        this.finishBlock()
+        this._currentBlock = list.toMarkdown()
+        this.finishBlock()
     }
 
     /**
@@ -91,26 +105,30 @@ class MarkdownDocument {
      */
     addCode(language, code) {
         if (!code) {
-            throw new Error('Code cannot be empty');
+            throw new Error('Code cannot be empty')
         }
 
         // TODO: экранировать блоки кода, содержащие произвольное число символов '`' подряд
-        this.finishBlock();
-        this._currentBlock = '```' + language + '\n' + code + '\n```';
-        this.finishBlock();
+        this.finishBlock()
+        this._currentBlock = '```' + language + '\n' + code + '\n```'
+        this.finishBlock()
     }
 
     finishBlock() {
         if (this._currentBlock !== '') {
-            this._blocks.push(this._currentBlock);
-            this._currentBlock = '';
+            this._blocks.push(this._currentBlock)
+            this._currentBlock = ''
         }
     }
 
-    finish() {
-        this.finishBlock();
-        return this._blocks.join("\n\n");
+    /**
+     * Возвращает строку текста в формате Markdown.
+     * @returns {string}
+     */
+    toMarkdown() {
+        this.finishBlock()
+        return this._blocks.join("\n\n")
     }
 }
 
-module.exports.MarkdownDocument = MarkdownDocument;
+module.exports.MarkdownDocument = MarkdownDocument
