@@ -35,8 +35,8 @@ WORKDIR /app
 
 COPY --from=builder --chown=appuser:appgroup /app/bin/backtomarkdown /app/
 
-RUN mkdir -p /app/scorm_packages && \
-    chown appuser:appgroup /app/scorm_packages
+RUN mkdir -p /app/public/scorm && \
+    chown appuser:appgroup /app/public/scorm
 
 USER appuser
 

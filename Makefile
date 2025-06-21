@@ -1,6 +1,6 @@
-.PHONY: all clean build test test_e2e download tidy run image
+.PHONY: all clean build build_js test test_e2e download tidy run image
 
-all: tidy test build
+all: tidy test build_js build
 
 clean:
 	rm -f bin/backtomarkdown
@@ -8,6 +8,11 @@ clean:
 build:
 	cd src/backtomarkdown && \
     CGO_ENABLED=0 go build -ldflags="-s -w" -o ../../bin/backtomarkdown && \
+	cd ../..
+
+build_js:
+	cd src/scormdownbrowser && \
+	npm run build && \
 	cd ../..
 
 test:

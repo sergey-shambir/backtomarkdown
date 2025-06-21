@@ -58,7 +58,7 @@ func getUploadedFile(c *gin.Context) (*multipart.FileHeader, error) {
 
 func createPackageDir() (string, error) {
 	id := uuid.New().String()
-	dirPath := filepath.Join("scorm_packages", id)
+	dirPath := filepath.Join("public/scorm", id)
 	return dirPath, os.MkdirAll(dirPath, 0755)
 }
 

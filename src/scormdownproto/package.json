@@ -1,0 +1,15 @@
+{
+  "name": "scormdownproto",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "commonjs",
+  "scripts": {
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@mozilla/readability": "^0.6.0",
+    "puppeteer": "^24.10.0"
+  }
+}

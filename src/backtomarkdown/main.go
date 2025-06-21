@@ -11,7 +11,8 @@ func main() {
 	r := gin.Default()
 	r.LoadHTMLGlob("templates/*")
 
-	r.StaticFS("/scorm", gin.Dir("scorm_packages", true))
+	r.StaticFS("/scorm", gin.Dir("public/scorm", true))
+	r.StaticFS("/js", gin.Dir("public/js", true))
 
 	r.GET("/", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "upload.html", nil)

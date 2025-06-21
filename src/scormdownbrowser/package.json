@@ -1,0 +1,17 @@
+{
+  "name": "scormdownbrowser",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "esbuild readability.js --bundle --minify --format=iife --outfile=../backtomarkdown/js/readability.js"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@mozilla/readability": "^0.6.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.5"
+  }
+}
